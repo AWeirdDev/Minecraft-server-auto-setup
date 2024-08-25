@@ -21,7 +21,7 @@ struct CLI {
     #[arg(short, long)]
     mc_version: Option<String>,
 
-    /// EULA agreement (true/false)
+    /// EULA agreement (true/false), reference: www.minecraft.net/en-us/eula
     #[arg(short, long)]
     eula: Option<bool>,
 
@@ -35,6 +35,16 @@ enum Software {
     Paper,
     Folia,
     Purpur,
+}
+
+fn inquired<T>(binding: Result<T, inquire::InquireError>) -> T {
+    match binding {
+        Ok(t) => t,
+        Err(e) => {
+            println!("{}: failed to inquire ({:?})", "error".red().bold(), e);
+            exit(-1);
+        }
+    }
 }
 
 impl Software {
@@ -83,13 +93,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             )
             .prompt();
 
-            match binding {
-                Ok(name) => Software::from_name(name.to_string()),
-                Err(e) => {
-                    println!("{}: failed to inquire ({:?})", "error".red().bold(), e);
-                    exit(-1);
-                }
-            }
+            Software::from_name(inquired(binding).to_string())
         } else {
             cli.software.unwrap()
         }
@@ -100,13 +104,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 .with_default("1.21.1")
                 .prompt();
 
-            match binding {
-                Ok(version) => version,
-                Err(e) => {
-                    println!("{}: failed to inquire ({:?})", "error".red().bold(), e);
-                    exit(-1);
-                }
-            }
+            inquired::<String>(binding)
         } else {
             cli.mc_version.unwrap()
         }
@@ -117,13 +115,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 Confirm::new("Do you agree to the Mojang EULA? (www.minecraft.net/en-us/eula)")
                     .prompt();
 
-            match binding {
-                Ok(result) => result,
-                Err(e) => {
-                    println!("{}: failed to inquire ({:?})", "error".red().bold(), e);
-                    exit(-1);
-                }
-            }
+            inquired::<bool>(binding)
         } else {
             cli.eula.unwrap()
         }

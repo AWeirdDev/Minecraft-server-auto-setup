@@ -1,5 +1,11 @@
 use std::{fs, io::Write};
 
+fn download_jar(res: reqwest::blocking::Response) -> Result<(), Box<dyn std::error::Error>> {
+    let mut file = fs::File::create("server.jar")?;
+    file.write(&res.bytes().unwrap())?;
+    Ok(())
+}
+
 pub fn get_purpur(version: String) -> Result<(), Box<dyn std::error::Error>> {
     let client = reqwest::blocking::Client::new();
     let res = client
@@ -10,9 +16,7 @@ pub fn get_purpur(version: String) -> Result<(), Box<dyn std::error::Error>> {
         .send();
 
     if let Ok(res) = res {
-        let mut file = fs::File::create("server.jar")?;
-        file.write(&res.bytes().unwrap())?;
-
+        download_jar(res)?;
         Ok(())
     } else {
         Err(format!("failed to download purpur").into())
@@ -46,9 +50,7 @@ pub fn get_other(software: String, version: String) -> Result<(), Box<dyn std::e
                 ))
                 .send();
             if let Ok(res) = res {
-                let mut file = fs::File::create("server.jar")?;
-                file.write(&res.bytes().unwrap())?;
-
+                download_jar(res)?;
                 Ok(())
             } else {
                 Err(format!("failed to download {}", software).into())
