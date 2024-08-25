@@ -2,7 +2,7 @@ use std::{fs, io::Write};
 
 fn download_jar(res: reqwest::blocking::Response) -> Result<(), Box<dyn std::error::Error>> {
     let mut file = fs::File::create("server.jar")?;
-    file.write(&res.bytes().unwrap())?;
+    file.write_all(&res.bytes().unwrap())?;
     Ok(())
 }
 

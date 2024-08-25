@@ -4,6 +4,7 @@ use clap::{Parser, ValueEnum};
 use colored::Colorize;
 use inquire::{Confirm, Select, Text};
 
+mod eula;
 mod softwares;
 
 #[derive(Parser)]
@@ -88,7 +89,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let software = {
         if cli.software.is_none() {
             let binding = Select::new(
-                "What server software are you using?",
+                "💽 What server software are you using?",
                 vec!["paper", "folia", "purpur"],
             )
             .prompt();
@@ -100,7 +101,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     };
     let version = {
         if cli.mc_version.is_none() {
-            let binding = Text::new("What version of Minecraft are you using?")
+            let binding = Text::new("🪨  What version of Minecraft are you using?")
                 .with_default("1.21.1")
                 .prompt();
 
@@ -111,9 +112,16 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     };
     let eula = {
         if cli.eula.is_none() {
-            let binding =
-                Confirm::new("Do you agree to the Mojang EULA? (www.minecraft.net/en-us/eula)")
-                    .prompt();
+            let binding = Confirm::new(
+                format!(
+                    "📄 Do you agree to the {}?",
+                    "\x1B]8;;https://www.minecraft.net/en-us/eula\x1B\\Mojang EULA\x1B]8;;\x1B\\"
+                        .purple()
+                )
+                .as_str(),
+            )
+            .with_placeholder("Y/n")
+            .prompt();
 
             inquired::<bool>(binding)
         } else {
@@ -122,7 +130,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     };
 
     println!(
-        "\n✨ Maoyue will setup {}, with Minecraft server version {}, {} Mojang's EULA for you.",
+        "\n✨ I will setup {}, with Minecraft server version {}, {} Mojang's EULA in this directory {}{}{}.",
         software.name().bold().yellow(),
         version.bold().blue(),
         {
@@ -131,7 +139,17 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             } else {
                 "denying".bold().red()
             }
-        }
+        },
+        "(".dimmed(),
+        {
+            let current_dir = std::env::current_dir().unwrap();
+            current_dir
+                .to_owned()
+                .file_name()
+                .and_then(|name| name.to_str())
+                .unwrap_or("<unknown>")
+        }.dimmed(),
+        ")".dimmed()
     );
 
     if !cli.yes {
@@ -162,7 +180,29 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     }
 
     println!();
-    print!("Downloading {}... ", software.name().cyan().bold());
+
+    if eula {
+        print!("(1/2) Adding EULA... ");
+        match eula::add_eula() {
+            Err(e) => {
+                println!("{}: failed to add EULA ({:?})", "error".red().bold(), e);
+                exit(-1);
+            }
+            Ok(_) => println!("{}", "✅ done!".bold().green()),
+        }
+    }
+
+    print!(
+        "{}Downloading {}... ",
+        {
+            if eula {
+                "(2/2) "
+            } else {
+                "(1/1) "
+            }
+        },
+        software.name().cyan().bold()
+    );
     std::io::stdout().flush()?;
 
     match softwares::get(software.name(), version) {
@@ -173,6 +213,19 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
         Ok(_) => println!("{}", "✅ done!".bold().green()),
     }
+
+    println!("\n{}", "Summary".bold().underline());
+    if eula {
+        println!("  {} eula.txt", "+".green().bold());
+    }
+
+    println!(
+        "  {} server.jar {}{}{}",
+        "+".green().bold(),
+        "(".dimmed(),
+        software.name().dimmed(),
+        ")".dimmed()
+    );
 
     Ok(())
 }
